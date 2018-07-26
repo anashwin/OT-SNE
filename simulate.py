@@ -19,6 +19,7 @@ def format_cell_frame_mixed(full_data_frame, G, D, time_steps):
     timestamps_out = 'id\tday\n'
 
     date_pairs_out = ''
+
     
     for t in range(time_steps):
         data_frame = full_data_frame[t]
@@ -26,12 +27,14 @@ def format_cell_frame_mixed(full_data_frame, G, D, time_steps):
         random.shuffle(a_d_f)
         # print(t)
         # print(appended_data_frame)
-
+        
+        cell_count = 0
+        
         if t < time_steps-1:
             date_pairs_out += '{}\t{}\n'.format(t,t+1)
         
         for idx in range(a_d_f.shape[0]):
-            cell_id = 'c_t{}_g{}'.format(int(a_d_f[idx,0]), int(a_d_f[idx,1]))
+            cell_id = 'c_t{}_g{}_{}'.format(int(a_d_f[idx,0]), int(a_d_f[idx,1]), cell_count)
             output += cell_id
             timestamps_out += cell_id
             timestamps_out += '\t{}'.format(int(a_d_f[idx,0]))
@@ -40,17 +43,20 @@ def format_cell_frame_mixed(full_data_frame, G, D, time_steps):
             output += '\n'
             timestamps_out += '\n'
             
+            cell_count += 1
+            
     output = output[:-1]
     timestamps_out = timestamps_out[:-1]
     date_pairs_out = date_pairs_out[:-1]
     
-    print(output)
-    print(timestamps_out)
-    print(date_pairs_out)
+    # print(output)
+    # print(timestamps_out)
+    # print(date_pairs_out)
     return output, timestamps_out, date_pairs_out
 
 def simulate_gaussians(mean, covariance, N_pts, time_steps, trajectory=None):
 
+    total_cells = 0
     full_data_frame = []
 
     state = None
@@ -58,7 +64,9 @@ def simulate_gaussians(mean, covariance, N_pts, time_steps, trajectory=None):
     for t in range(time_steps):
         data_frame = []
         for g in range(mean.shape[0]):
-            N = N_pts + int(random.normal(0, .1*N_pts))# (Plus some Gaussian noise?)
+            N = N_pts + int(random.normal(0, .1*N_pts)) # (Plus some Gaussian noise?)
+            total_cells += N
+            
             g_frame = random.multivariate_normal(mean[g,:], covariance[g,:,:],
                                                  size=N)
             full_g_frame = np.hstack((t*np.ones((N,1)), g*np.ones((N,1)), g_frame))
@@ -72,24 +80,25 @@ def simulate_gaussians(mean, covariance, N_pts, time_steps, trajectory=None):
         mean, state = trajectory(mean, covariance, t, state)
         
         # print(mean)
-
+        
+    print(total_cells)
     return full_data_frame
 
-G = 4
-D = 10
+G = 5
+D = 40
 
 # mean = np.array([[.5, .5], [-.5,-.5]])
 mean = random.randn(G,D)
 cov = np.array([np.eye(D,D) for _ in range(G)])
-print(cov)
+# print(cov)
 
-N_pts = 10
-time_steps = 3
+N_pts = 100
+time_steps = 51
 trajectory = linear_update
 
-gene_matrix_outfile = 'matrix.txt'
-cell_timestamps_outfile = 'timestamps.txt'
-date_pairs_outfile = 'date_pairs.txt'
+gene_matrix_outfile = 'matrix_small.txt'
+cell_timestamps_outfile = 'timestamps_small.txt'
+date_pairs_outfile = 'date_pairs_small.txt'
 
 # if len(sys.argv) > 1:
 
