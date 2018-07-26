@@ -9,4 +9,4 @@ Our software is based on the implementation of Barnes-Hut _t_-SNE developed by L
 We are working on releasing wrappers in other programming languages such as R and Python. If you would like an update when these become available, feel free to drop us a note at the email address below.
 
 ##### Contact for Questions
-Hoon Cho, hhcho@mit.edu
+Ashwin Narayan, ashwinn@mit.edu
