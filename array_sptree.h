@@ -31,11 +31,12 @@
  */
 
 
-#ifndef SPTREE_H
-#define SPTREE_H
+#ifndef ARRAYSPTREE_H
+#define ARRAYSPTREE_H
 
-using namespace std;
+// using namespace std;
 
+// class ArraySPTree;
 
 class Cell {
 
@@ -56,8 +57,7 @@ public:
     bool containsPoint(double point[]);
 };
 
-
-class SPTree
+class ArraySPTree
 {
     
     // Fixed constants
@@ -67,7 +67,7 @@ class SPTree
     double* buff;
     
     // Properties of this node in the tree
-    SPTree* parent;
+    ArraySPTree* parent;
     unsigned int dimension;
     bool is_leaf;
     unsigned int size;
@@ -81,7 +81,7 @@ class SPTree
     double* center_of_mass; // one center of mass per time step
     unsigned int index[QT_NODE_CAPACITY];
 
-    SPTree** direct_ptr;
+    ArraySPTree** direct_ptr;
 
     // Variables corresponding to different batch comparisions
     unsigned int time_steps; // number of time steps
@@ -89,35 +89,36 @@ class SPTree
     int* time_assignments; // time assigned to each data point
     
     // Children
-    SPTree** children;
+    ArraySPTree** children;
     unsigned int no_children;
     
 public:
     // All but the default constructor can just be fed Nt
-    SPTree(unsigned int D, double* inp_data, unsigned int N, unsigned int T, int* ts_assignments);
-    SPTree(unsigned int D, double* inp_data, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments, int* input_Nt);
-    SPTree(unsigned int D, double* inp_data, unsigned int N, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments, int* input_Nt);
-    SPTree(SPTree* inp_parent, unsigned int D, double* inp_data, unsigned int N, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments, int* input_Nt);
-    SPTree(SPTree* inp_parent, unsigned int D, double* inp_data, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments, int* input_Nt);
-    ~SPTree();
+    ArraySPTree(unsigned int D, double* inp_data, unsigned int N, unsigned int T, int* ts_assignments);
+    ArraySPTree(unsigned int D, double* inp_data, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments, int* input_Nt);
+    ArraySPTree(unsigned int D, double* inp_data, unsigned int N, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments, int* input_Nt);
+    ArraySPTree(ArraySPTree* inp_parent, unsigned int D, double* inp_data, unsigned int N, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments, int* input_Nt);
+    ArraySPTree(ArraySPTree* inp_parent, unsigned int D, double* inp_data, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments, int* input_Nt);
+    ~ArraySPTree();
     void setData(double* inp_data);
-    SPTree* getParent();
+    ArraySPTree* getParent();
     void construct(Cell boundary);
-    SPTree* insert(unsigned int new_index);
+    ArraySPTree* insert(unsigned int new_index);
     void subdivide();
     bool isCorrect();
     void rebuildTree();
     void getAllIndices(unsigned int* indices);
     unsigned int getDepth();
-    void computeNonEdgeForces(unsigned int point_index, double theta, double neg_f[], double* sum_Q);
+    void computeNonEdgeForces(unsigned int point_index, double theta, double neg_f[], double* sum_Q,
+			      int T_offset);
     void computeEdgeForces(unsigned int* row_P, unsigned int* col_P, double* val_P, int N, double* pos_f);
     void print();
     void modifyWeight(unsigned int index, int delta);
     void modifyWeight(int delta);
-    SPTree** getDirectPtrArray();
+    ArraySPTree** getDirectPtrArray();
     
 private:
-    void init(SPTree* inp_parent, unsigned int D, double* inp_data, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments);
+    void init(ArraySPTree* inp_parent, unsigned int D, double* inp_data, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments);
     void fill(unsigned int N);
     unsigned int getAllIndices(unsigned int* indices, unsigned int loc);
     bool isChild(unsigned int test_index, unsigned int start, unsigned int end);

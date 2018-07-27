@@ -35,7 +35,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <cmath>
-#include "sptree.h"
+#include "array_sptree.h"
 
 #include <armadillo>
 using namespace arma;
@@ -88,17 +88,18 @@ bool Cell::containsPoint(double point[])
 }
 
 
-// Default constructor for SPTree -- build tree, too!
-SPTree::SPTree(unsigned int D, double* inp_data, unsigned int N, unsigned int T,
+// Default constructor for ArraySPTree -- build tree, too!
+ArraySPTree::ArraySPTree(unsigned int D, double* inp_data, unsigned int N, unsigned int T,
 	       int* ts_assignments)
 {
 
     int* pts_per_ts = (int*) calloc(T, sizeof(int));
-    // Compute mean, width, and height of current map (boundaries of SPTree)
+    // Compute mean, width, and height of current map (boundaries of ArraySPTree)
     int nD = 0;
     double* mean_Y = (double*) calloc(D,  sizeof(double));
     double*  min_Y = (double*) malloc(D * sizeof(double)); for(unsigned int d = 0; d < D; d++)  min_Y[d] =  DBL_MAX;
     double*  max_Y = (double*) malloc(D * sizeof(double)); for(unsigned int d = 0; d < D; d++)  max_Y[d] = -DBL_MAX;
+    int t; 
     for(unsigned int n = 0; n < N; n++) {
         t = inp_data[n];
 	pts_per_ts[t]++; 
@@ -114,12 +115,12 @@ SPTree::SPTree(unsigned int D, double* inp_data, unsigned int N, unsigned int T,
     
     for(int d = 0; d < D; d++) mean_Y[d] /= (double) N;
     
-    // Construct SPTree
+    // Construct ArraySPTree
     double* width = (double*) malloc(D * sizeof(double));
     for(int d = 0; d < D; d++) width[d] = fmax(max_Y[d] - mean_Y[d], mean_Y[d] - min_Y[d]) + 1e-5;
     init(NULL, D, inp_data, mean_Y, width, T, ts_assignments);
 
-    direct_ptr = (SPTree **) calloc(N, sizeof(SPTree*));
+    direct_ptr = (ArraySPTree **) calloc(N, sizeof(ArraySPTree*));
     
     fill(N);
     
@@ -131,8 +132,8 @@ SPTree::SPTree(unsigned int D, double* inp_data, unsigned int N, unsigned int T,
 }
 
 
-// Constructor for SPTree with particular size and parent -- build the tree, too!
-SPTree::SPTree(unsigned int D, double* inp_data, unsigned int N, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments, int* input_Nt)
+// Constructor for ArraySPTree with particular size and parent -- build the tree, too!
+ArraySPTree::ArraySPTree(unsigned int D, double* inp_data, unsigned int N, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments, int* input_Nt)
 {
     Nt = input_Nt;
     init(NULL, D, inp_data, inp_corner, inp_width, T, ts_assignments);
@@ -140,23 +141,23 @@ SPTree::SPTree(unsigned int D, double* inp_data, unsigned int N, double* inp_cor
 }
 
 
-// Constructor for SPTree with particular size (do not fill the tree)
-SPTree::SPTree(unsigned int D, double* inp_data, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments, int* input_Nt)
+// Constructor for ArraySPTree with particular size (do not fill the tree)
+ArraySPTree::ArraySPTree(unsigned int D, double* inp_data, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments, int* input_Nt)
 {
   Nt = input_Nt;
     init(NULL, D, inp_data, inp_corner, inp_width, T, ts_assignments);
 }
 
 
-// Constructor for SPTree with particular size and parent (do not fill tree)
-SPTree::SPTree(SPTree* inp_parent, unsigned int D, double* inp_data, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments, int* input_Nt) {
+// Constructor for ArraySPTree with particular size and parent (do not fill tree)
+ArraySPTree::ArraySPTree(ArraySPTree* inp_parent, unsigned int D, double* inp_data, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments, int* input_Nt) {
   Nt = input_Nt;
     init(inp_parent, D, inp_data, inp_corner, inp_width, T, ts_assignments);
 }
 
 
-// Constructor for SPTree with particular size and parent -- build the tree, too!
-SPTree::SPTree(SPTree* inp_parent, unsigned int D, double* inp_data, unsigned int N, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments, int* input_Nt)
+// Constructor for ArraySPTree with particular size and parent -- build the tree, too!
+ArraySPTree::ArraySPTree(ArraySPTree* inp_parent, unsigned int D, double* inp_data, unsigned int N, double* inp_corner, double* inp_width, unsigned int T, int* ts_assignments, int* input_Nt)
 {
   Nt = input_Nt;
     init(inp_parent, D, inp_data, inp_corner, inp_width, T, ts_assignments);
@@ -165,7 +166,7 @@ SPTree::SPTree(SPTree* inp_parent, unsigned int D, double* inp_data, unsigned in
 
 
 // Main initialization function
-void SPTree::init(SPTree* inp_parent, unsigned int D, double* inp_data, double* inp_corner,
+void ArraySPTree::init(ArraySPTree* inp_parent, unsigned int D, double* inp_data, double* inp_corner,
 		  double* inp_width, unsigned int T, int* ts_assignments)
 {
     time_steps = T;
@@ -191,7 +192,7 @@ void SPTree::init(SPTree* inp_parent, unsigned int D, double* inp_data, double* 
     for(unsigned int d = 0; d < D; d++) boundary->setCorner(d, inp_corner[d]);
     for(unsigned int d = 0; d < D; d++) boundary->setWidth( d, inp_width[d]);
     
-    children = (SPTree**) malloc(no_children * sizeof(SPTree*));
+    children = (ArraySPTree**) malloc(no_children * sizeof(ArraySPTree*));
     for(unsigned int i = 0; i < no_children; i++) children[i] = NULL;
 
     center_of_mass = (double*) malloc(time_steps*D * sizeof(double));
@@ -203,8 +204,8 @@ void SPTree::init(SPTree* inp_parent, unsigned int D, double* inp_data, double* 
 }
 
 
-// Destructor for SPTree
-SPTree::~SPTree()
+// Destructor for ArraySPTree
+ArraySPTree::~ArraySPTree()
 {
     for(unsigned int i = 0; i < no_children; i++) {
         if(children[i] != NULL) delete children[i];
@@ -218,19 +219,19 @@ SPTree::~SPTree()
 
 
 // Update the data underlying this tree
-void SPTree::setData(double* inp_data)
+void ArraySPTree::setData(double* inp_data)
 {
     data = inp_data;
 }
 
 
 // Get the parent of the current tree
-SPTree* SPTree::getParent()
+ArraySPTree* ArraySPTree::getParent()
 {
     return parent;
 }
 
-SPTree** SPTree::getDirectPtrArray()
+ArraySPTree** ArraySPTree::getDirectPtrArray()
 {
     return direct_ptr;
 }
@@ -238,8 +239,8 @@ SPTree** SPTree::getDirectPtrArray()
 
 // TODO: FINISH UPDATING CoM FOR EACH TIME STEP
 
-// Insert a point into the SPTree
-SPTree* SPTree::insert(unsigned int new_index)
+// Insert a point into the ArraySPTree
+ArraySPTree* ArraySPTree::insert(unsigned int new_index)
 {
     int pt_t = time_assignments[new_index]; 
     // Ignore objects which do not belong in this quad tree
@@ -248,12 +249,14 @@ SPTree* SPTree::insert(unsigned int new_index)
     if(!boundary->containsPoint(point))
         return NULL;
 
-    new_ts = time_assignments[new_index];
+    int new_ts = time_assignments[new_index];
     
     // Online update of cumulative size (for given time step) and center-of-mass
     cum_size[pt_t]++;
-    double mult1 = (double) (cum_size - 1) / (double) cum_size;
-    double mult2 = 1.0 / (double) cum_size;
+
+    double mult1 = (double) (cum_size[pt_t] - 1) / (double) cum_size[pt_t];
+    double mult2 = 1.0 / (double) cum_size[pt_t];
+    
     for(unsigned int d = 0; d < dimension; d++) center_of_mass[pt_t*dimension+d] *= mult1;
     for(unsigned int d = 0; d < dimension; d++) center_of_mass[pt_t*dimension+d] += mult2 * point[d];
     
@@ -274,6 +277,7 @@ SPTree* SPTree::insert(unsigned int new_index)
         any_duplicate = any_duplicate | duplicate;
     }
     if(any_duplicate) {
+      cout << "DUPLICATE?" << endl;
       return this;
     }
     
@@ -282,7 +286,7 @@ SPTree* SPTree::insert(unsigned int new_index)
     
     // Find out where the point can be inserted
     for(unsigned int i = 0; i < no_children; i++) {
-      SPTree* ret = children[i]->insert(new_index);
+      ArraySPTree* ret = children[i]->insert(new_index);
       if (ret != NULL) return ret;
     }
     
@@ -292,7 +296,7 @@ SPTree* SPTree::insert(unsigned int new_index)
 
     
 // Create four children which fully divide this cell into four quads of equal area
-void SPTree::subdivide() {
+void ArraySPTree::subdivide() {
     
     // Create new children
     double* new_corner = (double*) malloc(dimension * sizeof(double));
@@ -305,7 +309,7 @@ void SPTree::subdivide() {
             else                   new_corner[d] = boundary->getCorner(d) + .5 * boundary->getWidth(d);
             div *= 2;
         }
-        children[i] = new SPTree(this, dimension, data, new_corner, new_width, time_steps, time_assignments, Nt);
+        children[i] = new ArraySPTree(this, dimension, data, new_corner, new_width, time_steps, time_assignments, Nt);
     }
     free(new_corner);
     free(new_width);
@@ -314,7 +318,7 @@ void SPTree::subdivide() {
     for(unsigned int i = 0; i < size; i++) {
         bool success = false;
         for(unsigned int j = 0; j < no_children; j++) {
-          SPTree* ret = children[j]->insert(index[i]);
+          ArraySPTree* ret = children[j]->insert(index[i]);
           if (ret != NULL) {
             direct_ptr[index[i]] = ret;
             break;
@@ -325,23 +329,24 @@ void SPTree::subdivide() {
     
     // Empty parent node
     size = 0;
+    // cout << "is leaf is false!";
     is_leaf = false;
 }
 
-void SPTree::modifyWeight(int delta) {
+void ArraySPTree::modifyWeight(int delta) {
   cum_size += delta;
 }
 
-void SPTree::modifyWeight(unsigned int index, int delta) {
-  SPTree* node = direct_ptr[index];
+void ArraySPTree::modifyWeight(unsigned int index, int delta) {
+  ArraySPTree* node = direct_ptr[index];
   while (node != NULL) {
     node->modifyWeight(delta);
     node = node->getParent();
   }
 }
 
-// Build SPTree on dataset
-void SPTree::fill(unsigned int N)
+// Build ArraySPTree on dataset
+void ArraySPTree::fill(unsigned int N)
 {
     for(unsigned int i = 0; i < N; i++) {
       direct_ptr[i] = insert(i);
@@ -349,7 +354,7 @@ void SPTree::fill(unsigned int N)
 }
 
 // Checks whether the specified tree is correct
-bool SPTree::isCorrect()
+bool ArraySPTree::isCorrect()
 {
     for(unsigned int n = 0; n < size; n++) {
         double* point = data + index[n] * dimension;
@@ -365,15 +370,15 @@ bool SPTree::isCorrect()
 
 
 
-// Build a list of all indices in SPTree
-void SPTree::getAllIndices(unsigned int* indices)
+// Build a list of all indices in ArraySPTree
+void ArraySPTree::getAllIndices(unsigned int* indices)
 {
     getAllIndices(indices, 0);
 }
 
 
-// Build a list of all indices in SPTree
-unsigned int SPTree::getAllIndices(unsigned int* indices, unsigned int loc)
+// Build a list of all indices in ArraySPTree
+unsigned int ArraySPTree::getAllIndices(unsigned int* indices, unsigned int loc)
 {
     
     // Gather indices in current quadrant
@@ -388,7 +393,7 @@ unsigned int SPTree::getAllIndices(unsigned int* indices, unsigned int loc)
 }
 
 
-unsigned int SPTree::getDepth() {
+unsigned int ArraySPTree::getDepth() {
     if(is_leaf) return 1;
     int depth = 0;
     for(unsigned int i = 0; i < no_children; i++) depth = fmax(depth, children[i]->getDepth());
@@ -397,44 +402,78 @@ unsigned int SPTree::getDepth() {
 
 
 // Compute non-edge forces using Barnes-Hut algorithm
-void SPTree::computeNonEdgeForces(unsigned int point_index, double theta, double neg_f[], double* sum_Q)
+void ArraySPTree::computeNonEdgeForces(unsigned int point_index, double theta, double neg_f[],
+				       double* sum_Q, int T_offset)
 {
+    // Record the time step of the point in question
+    int time_step = time_assignments[point_index]; 
+    //int time_start = min((double)(time_step-T_offset), 0.0);
+    //int time_finish = max((double)(time_step+T_offset), (double)(time_steps-1)); 
+    int time_start = (time_step - T_offset > 0) ? (time_step - T_offset) : 0;
+    int time_finish = (time_step + T_offset > time_steps-1) ?
+	(time_steps - 1) : (time_step + T_offset);
     
     // Make sure that we spend no time on empty nodes or self-interactions
-    if(cum_size == 0 || (is_leaf && size == 1 && index[0] == point_index)) return;
+    int total_size = 0;
+    for(int t=time_start; t<=time_finish; t++) {
+	total_size += cum_size[t];
+    }
+    if(total_size == 0 || (is_leaf && size == 1 && index[0] == point_index)) return;
+
+    // compute Bounding Box to see if this is a good summary point (in the forthcoming loop)
+    double D;
     
-    // Compute distance between point and center-of-mass
-    double D = .0;
-    unsigned int ind = point_index * dimension;
-    for(unsigned int d = 0; d < dimension; d++) buff[d] = data[ind + d] - center_of_mass[d];
-    for(unsigned int d = 0; d < dimension; d++) D += buff[d] * buff[d];
-    
-    // Check whether we can use this node as a "summary"
+    unsigned int ind = point_index*dimension;
     double max_width = 0.0;
     double cur_width;
     for(unsigned int d = 0; d < dimension; d++) {
-        cur_width = boundary->getWidth(d);
-        max_width = (max_width > cur_width) ? max_width : cur_width;
+	cur_width = boundary->getWidth(d);
+	max_width = (max_width > cur_width) ? max_width : cur_width;
     }
-    if(is_leaf || max_width / sqrt(D) < theta) {
     
-        // Compute and add t-SNE force between point and current node
-        D = 1.0 / (1.0 + D);
-        double mult = cum_size * D;
-        *sum_Q += mult;
-        mult *= D;
-        for(unsigned int d = 0; d < dimension; d++) neg_f[d] += mult * buff[d];
-    }
-    else {
+    // Compute distance between point and center-of-masses
+    for(int t=time_start; t<=time_finish; t++) {
+	    // if there are no points from this time step skip to next time step:
+	    if(cum_size[t] == 0) {
+		continue; 
+	    }	    
+	    D = .0;
+	    unsigned int ind = point_index * dimension;
+	    for(unsigned int d = 0; d < dimension; d++) {
+		buff[d] = data[ind + d] - center_of_mass[t*dimension+d];
+	    }
+	    for(unsigned int d = 0; d < dimension; d++) D += buff[d] * buff[d];
+	    /*
+	    double max_width = 0.0;
+	    double cur_width;
+	    for(unsigned int d = 0; d < dimension; d++) {
+		cur_width = boundary->getWidth(d);
+		max_width = (max_width > cur_width) ? max_width : cur_width;
+	    }
+	    */
+	    
+	    // Check whether we can use this node as a "summary"
+	    if(is_leaf || max_width / sqrt(D) < theta) {
+    
+		// Compute and add t-SNE force between point and current node
+		D = 1.0 / (1.0 + D);
+		double mult = cum_size[t] * D;
+		*sum_Q += mult;
+		mult *= D;
+		for(unsigned int d = 0; d < dimension; d++) neg_f[d] += mult * buff[d];
+	    }
+	    else {
 
-        // Recursively apply Barnes-Hut to children
-        for(unsigned int i = 0; i < no_children; i++) children[i]->computeNonEdgeForces(point_index, theta, neg_f, sum_Q);
-    }
+		// Recursively apply Barnes-Hut to children
+		for(unsigned int i = 0; i < no_children; i++) {
+		    children[i]->computeNonEdgeForces(point_index,theta, neg_f, sum_Q, T_offset);
+		}
+	    }
+	}
 }
 
-
 // Computes edge forces
-void SPTree::computeEdgeForces(unsigned int* row_P, unsigned int* col_P, double* val_P, int N, double* pos_f)
+void ArraySPTree::computeEdgeForces(unsigned int* row_P, unsigned int* col_P, double* val_P, int N, double* pos_f)
 {
     
     // Loop over all edges in the graph
@@ -496,26 +535,36 @@ void SPTree::computeEdgeForces(unsigned int* row_P, unsigned int* col_P, double*
 
 
 // Print out tree
-void SPTree::print() 
+void ArraySPTree::print() 
 {
-    if(cum_size == 0) {
+  int total_size = 0;
+  for (int t=0; t < time_steps; t++) {
+    total_size += cum_size[t]; 
+  }
+    if(total_size == 0) {
         printf("Empty node\n");
         return;
     }
 
     if(is_leaf) {
+      cout << "Leaf node; size = " << size << " ; "; 
         printf("Leaf node; data = [");
         for(int i = 0; i < size; i++) {
             double* point = data + index[i] * dimension;
             for(int d = 0; d < dimension; d++) printf("%f, ", point[d]);
             printf(" (index = %d)", index[i]);
+	    printf(" (t = %d)", time_assignments[index[i]]);
             if(i < size - 1) printf("\n");
             else printf("]\n");
         }        
     }
     else {
-        printf("Intersection node with center-of-mass = [");
-        for(int d = 0; d < dimension; d++) printf("%f, ", center_of_mass[d]);
+        printf("Intersection node with centers-of-mass = [");
+	for(int t=0; t < time_steps; t++) {
+	  printf("("); 
+	  for(int d = 0; d < dimension; d++) printf("%f, ", center_of_mass[t*dimension + d]);
+	  printf(")"); 
+	}
         printf("]; children are:\n");
         for(int i = 0; i < no_children; i++) children[i]->print();
     }
