@@ -8,13 +8,14 @@
 using namespace std;
 
 int main(int argc, char **argv) {
-
+  /*
   cout << min(1., 2.) << endl; 
   cout << "Hello World!" << endl;
-
+  */
+  
   unsigned int no_dims = 2;
   // unsigned int N_data = 10;
-  int square_dim = 8;
+  int square_dim = 4;
   int N_data = square_dim*square_dim; 
   unsigned int T_time_steps = 2;
   unsigned int pts_per_ts = N_data/T_time_steps;
@@ -43,28 +44,65 @@ int main(int argc, char **argv) {
       test_data[(i*square_dim + j)*no_dims] = x;
       test_data[(i*square_dim + j)*no_dims + 1] = y;
 
-      assignments[i*square_dim + j] = (i) % T_time_steps;
+      assignments[i*square_dim + j] = (i+j) % T_time_steps;
 
     }
   }
-
-  /*
-  for(int n=0; n<N_data; n++) {
-    cout << "(" << test_data[n*no_dims] << "," << test_data[n*no_dims+1] << "); " << assignments[n]
-	 << endl;
-  }
-  */
-
-  // cout << endl;
+  double theta = .3;
+  
+  double neg_f_tmp[3] = {0};
+  double cur_qsum = .0;
+  int T_offset = 1;
   
   //SPTree sptree_test; 
   ArraySPTree *array_sptree_test = new ArraySPTree(no_dims, test_data, N_data, T_time_steps,
 						   assignments);
+
+  array_sptree_test->print();
+  
+  int targ_ind = 0; 
+  cout << "TARGET: (" << test_data[targ_ind*no_dims] << ", " << test_data[targ_ind*no_dims+1] << ")  t="
+       << assignments[targ_ind] << endl;
+  array_sptree_test->computeNonEdgeForces(targ_ind, theta, neg_f_tmp, &cur_qsum, T_offset, assignments[targ_ind]);
+  cout << "OUT_GRAD: "; 
+  for(int d=0; d<3; d++) cout << neg_f_tmp[d] << ", ";
+  cout << endl;
+
   // SPTree *sptree_test = new SPTree(no_dims, test_data, N_data);
   // array_sptree_test->print();
   // sptree_test->print();
 
   // Our next test is to test computeNonEdgeForces
 
+  // 1. two close-by nodes, one faraway one
+
+  /*
+  T_time_steps = 1;
+  N_data = 3;
+
+  test_data = (double*) realloc((double*)test_data, N_data*no_dims*sizeof(double));
+  assignments = (int*) realloc((int*)assignments, N_data*sizeof(int));
+
+  test_data[0] = .5;
+  test_data[1] = .5;
+
+  test_data[2] = -.45;
+  test_data[3] = -.4;
+
+  test_data[4] = -.4;
+  test_data[5] = -.45; 
+
+  assignments[0] = 0;
+  assignments[1] = 0;
+  assignments[2] = 0;
+
   
+  ArraySPTree *sp2 = new ArraySPTree(no_dims, test_data, N_data, T_time_steps, assignments);
+  sp2->print();
+  sp2->computeNonEdgeForces(1, theta, neg_f_tmp, &cur_qsum, T_offset);
+
+  for(int d=0; d<3; d++) cout << neg_f_tmp[d] << ", ";
+  cout << endl;
+  */
 }
+

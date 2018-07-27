@@ -403,10 +403,10 @@ unsigned int ArraySPTree::getDepth() {
 
 // Compute non-edge forces using Barnes-Hut algorithm
 void ArraySPTree::computeNonEdgeForces(unsigned int point_index, double theta, double neg_f[],
-				       double* sum_Q, int T_offset)
+				       double* sum_Q, int T_offset, int time_step)
 {
     // Record the time step of the point in question
-    int time_step = time_assignments[point_index]; 
+    // int time_step = time_assignments[point_index]; 
     //int time_start = min((double)(time_step-T_offset), 0.0);
     //int time_finish = max((double)(time_step+T_offset), (double)(time_steps-1)); 
     int time_start = (time_step - T_offset > 0) ? (time_step - T_offset) : 0;
@@ -433,6 +433,7 @@ void ArraySPTree::computeNonEdgeForces(unsigned int point_index, double theta, d
     
     // Compute distance between point and center-of-masses
     for(int t=time_start; t<=time_finish; t++) {
+      // cout << "Time = " << t << ";" << endl; 
 	    // if there are no points from this time step skip to next time step:
 	    if(cum_size[t] == 0) {
 		continue; 
@@ -454,7 +455,12 @@ void ArraySPTree::computeNonEdgeForces(unsigned int point_index, double theta, d
 	    
 	    // Check whether we can use this node as a "summary"
 	    if(is_leaf || max_width / sqrt(D) < theta) {
-    
+
+	      // PRINT DEBUGGING!
+	      cout << (is_leaf ? "Leaf":"CoM") << ", (" << center_of_mass[t*dimension] << ", "
+		   << center_of_mass[t*dimension+1] << "), t: " << t << endl;
+	      // DONE PRINTING
+	      
 		// Compute and add t-SNE force between point and current node
 		D = 1.0 / (1.0 + D);
 		double mult = cum_size[t] * D;
@@ -466,7 +472,7 @@ void ArraySPTree::computeNonEdgeForces(unsigned int point_index, double theta, d
 
 		// Recursively apply Barnes-Hut to children
 		for(unsigned int i = 0; i < no_children; i++) {
-		    children[i]->computeNonEdgeForces(point_index,theta, neg_f, sum_Q, T_offset);
+		  children[i]->computeNonEdgeForces(point_index,theta, neg_f, sum_Q, 0, t);
 		}
 	    }
 	}

@@ -110,7 +110,7 @@ public:
     void getAllIndices(unsigned int* indices);
     unsigned int getDepth();
     void computeNonEdgeForces(unsigned int point_index, double theta, double neg_f[], double* sum_Q,
-			      int T_offset);
+			      int T_offset, int time_step);
     void computeEdgeForces(unsigned int* row_P, unsigned int* col_P, double* val_P, int N, double* pos_f);
     void print();
     void modifyWeight(unsigned int index, int delta);
