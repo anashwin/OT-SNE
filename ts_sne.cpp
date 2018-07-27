@@ -37,11 +37,16 @@
 #include <cstring>
 #include <ctime>
 #include <chrono>
+#include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
 #include "vptree.h"
 #include "array_sptree.h"
 #include "ts_sne.h"
 
 using namespace std;
+// namespace po = boost::program_options;
+// namespace fsys = boost::filesystem;
+
 auto t_prev = chrono::high_resolution_clock::now();
 void tic() {
   t_prev = chrono::high_resolution_clock::now();
@@ -891,7 +896,8 @@ bool TS_SNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
       if (use_target_Y) {
         C = sqrt(sum(sum(square(target_Y - Y))));
       } else {
-        C = evaluateError(row_P, col_P, val_P, Y.memptr(), N, no_dims, theta, P_rowsum);
+        C = evaluateError(row_P, col_P, val_P, Y.memptr(), N, no_dims, theta, P_rowsum, time_steps,
+			  assignments);
       }
 
       float elapsed = chrono::duration<float, std::milli>(t_end - t_start).count() / 1000.0;
