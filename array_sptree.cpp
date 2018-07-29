@@ -539,18 +539,24 @@ void ArraySPTree::computeEdgeForces(unsigned int* row_P, unsigned int* col_P, do
     }
 }
 
+void ArraySPTree::print() {
+  print(0); 
+} 
 
 // Print out tree
-void ArraySPTree::print() 
+void ArraySPTree::print(int spaces) 
 {
+  for(int i=0; i<spaces; i++) {
+    printf(" "); 
+  } 
   int total_size = 0;
   for (int t=0; t < time_steps; t++) {
     total_size += cum_size[t]; 
   }
-    if(total_size == 0) {
-        printf("Empty node\n");
-        return;
-    }
+  if(total_size == 0) {
+    printf("Empty node\n");
+    return;
+  }
 
     if(is_leaf) {
       cout << "Leaf node; size = " << size << " ; "; 
@@ -572,7 +578,7 @@ void ArraySPTree::print()
 	  printf(")"); 
 	}
         printf("]; children are:\n");
-        for(int i = 0; i < no_children; i++) children[i]->print();
+        for(int i = 0; i < no_children; i++) children[i]->print(spaces+4);
     }
 }
 

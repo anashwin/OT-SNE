@@ -113,6 +113,7 @@ public:
 			      int T_offset, int time_step);
     void computeEdgeForces(unsigned int* row_P, unsigned int* col_P, double* val_P, int N, double* pos_f);
     void print();
+    void print(int spaces); 
     void modifyWeight(unsigned int index, int delta);
     void modifyWeight(int delta);
     ArraySPTree** getDirectPtrArray();

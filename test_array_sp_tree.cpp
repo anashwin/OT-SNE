@@ -16,9 +16,9 @@ int main(int argc, char **argv) {
   unsigned int no_dims = 2;
   // unsigned int N_data = 10;
   int square_dim = 4;
-  int N_data = square_dim*square_dim; 
-  unsigned int T_time_steps = 2;
-  unsigned int pts_per_ts = N_data/T_time_steps;
+  int N_data = square_dim*square_dim + 2; 
+  unsigned int T_time_steps = 4;
+  // unsigned int pts_per_ts = N_data/T_time_steps;
 
   
   double *test_data = (double *) calloc(N_data*no_dims, sizeof(double));
@@ -44,10 +44,21 @@ int main(int argc, char **argv) {
       test_data[(i*square_dim + j)*no_dims] = x;
       test_data[(i*square_dim + j)*no_dims + 1] = y;
 
-      assignments[i*square_dim + j] = (i+j) % T_time_steps;
+      assignments[i*square_dim + j] = (i+j) % 2;
 
     }
   }
+
+  // Add two data points and different time-steps that should not be considered
+  test_data[(square_dim*square_dim)*no_dims] = .3;
+  test_data[(square_dim*square_dim)*no_dims+1] = -.1;
+  assignments[square_dim*square_dim] = 2;
+
+  test_data[(square_dim*square_dim+1)*no_dims] = -1.3;
+  test_data[(square_dim*square_dim+1)*no_dims+1] = -1.1;
+  assignments[square_dim*square_dim+1] = 3;
+	    
+  
   double theta = .3;
   
   double neg_f_tmp[3] = {0};
