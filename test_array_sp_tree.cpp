@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
   ArraySPTree *array_sptree_test = new ArraySPTree(no_dims, test_data, N_data, T_time_steps,
 						   assignments);
 
-  array_sptree_test->print();
+  // array_sptree_test->print();
   
   int targ_ind = 0; 
   cout << "TARGET: (" << test_data[targ_ind*no_dims] << ", " << test_data[targ_ind*no_dims+1] << ")  t="

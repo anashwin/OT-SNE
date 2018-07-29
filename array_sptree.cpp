@@ -437,13 +437,21 @@ void ArraySPTree::computeNonEdgeForces(unsigned int point_index, double theta, d
 	    // if there are no points from this time step skip to next time step:
 	    if(cum_size[t] == 0) {
 		continue; 
-	    }	    
+	    }
+
 	    D = .0;
 	    unsigned int ind = point_index * dimension;
 	    for(unsigned int d = 0; d < dimension; d++) {
 		buff[d] = data[ind + d] - center_of_mass[t*dimension+d];
 	    }
+	    
 	    for(unsigned int d = 0; d < dimension; d++) D += buff[d] * buff[d];
+
+	    if((cum_size[t] == 1) && (D < EPS)) {
+	      cout << "This box has only the target point!" << endl; 
+	      continue; // The point in this quadrant is our pt
+	    } 
+
 	    /*
 	    double max_width = 0.0;
 	    double cur_width;
@@ -454,7 +462,7 @@ void ArraySPTree::computeNonEdgeForces(unsigned int point_index, double theta, d
 	    */
 	    
 	    // Check whether we can use this node as a "summary"
-	    if(is_leaf || max_width / sqrt(D) < theta) {
+	    if(is_leaf || cum_size[t] == 1 || max_width / sqrt(D) < theta) {
 
 	      // PRINT DEBUGGING!
 	      cout << (is_leaf ? "Leaf":"CoM") << ", (" << center_of_mass[t*dimension] << ", "
@@ -469,7 +477,11 @@ void ArraySPTree::computeNonEdgeForces(unsigned int point_index, double theta, d
 		for(unsigned int d = 0; d < dimension; d++) neg_f[d] += mult * buff[d];
 	    }
 	    else {
-
+	      // DEBUGGING!
+	      cout << "Cannot be summary: (" << center_of_mass[t*dimension] << ", "
+		   << center_of_mass[t*dimension+1] << "); " << (max_width / sqrt(D))
+		   << "; t: " << t << endl;
+	      
 		// Recursively apply Barnes-Hut to children
 		for(unsigned int i = 0; i < no_children; i++) {
 		  children[i]->computeNonEdgeForces(point_index,theta, neg_f, sum_Q, 0, t);

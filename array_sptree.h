@@ -62,7 +62,8 @@ class ArraySPTree
     
     // Fixed constants
     static const unsigned int QT_NODE_CAPACITY = 1;
-
+    double EPS = .00000001;
+    
     // A buffer we use when doing force computations
     double* buff;
     
