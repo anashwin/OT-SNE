@@ -266,6 +266,7 @@ int main(int argc, char **argv) {
   unsigned col_offset =0;
   unsigned int K = (int)(3*perplexity); // # of nearest neighbors
 
+  // unsigned int last
   
   for(int t=0; t < time_steps; t++) {
     time_start = (t - time_offset > 0) ? (t-time_offset):0;
@@ -289,12 +290,15 @@ int main(int argc, char **argv) {
 
     // Update "full" vectors to hold new data
     try {
-    full_row_P.reserve(current_row+1);
+    full_row_P.reserve(current_row);
     full_col_P.reserve(current_row*K);
-    full_val_P.reserve(current_row*K); 
+    full_val_P.reserve(current_row*K);
+
+    cout << "loop size? " << full_col_P.capacity() << endl;
+						  
     } catch(...) {
       cout << "Some sort of error has happened" << endl;
-      return 1; 
+      return 1;
     }
     
     /*
@@ -327,12 +331,13 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    for(int r=0; r<=num_instances[t]; r++) {
-      full_row_P.push_back(temp_row_P[r]); 
+    // full_row_P[
+    for(int r=0; r< num_instances[t]; r++) {
+      full_row_P.push_back(temp_row_P[r] + current_row); 
     }
 
-    for(int c=0; c<=num_instances[t]*K; c++) {
-      full_col_P.push_back(temp_col_P[c]);
+    for(int c=0; c< num_instances[t]*K; c++) {
+      full_col_P.push_back(temp_col_P[c] + current_row);
       full_val_P.push_back(temp_val_P[c]);
     } 
     
@@ -344,6 +349,11 @@ int main(int argc, char **argv) {
     cout << "Done with t : " << t << endl;
   }
 
+  full_row_P.reserve(current_row +1); 
+  full_row_P.push_back(current_row*K); 
+    
+  cout << "size? " <<  full_row_P.size() << " " << full_col_P.size() << " " <<  full_val_P.size() << endl;
+  
   save_sparse_mat(outfile, &full_row_P[0], &full_col_P[0], &full_val_P[0], current_row);
   /*
   delete *full_row_P;
