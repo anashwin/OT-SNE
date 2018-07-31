@@ -1,4 +1,5 @@
 #include <iostream>
+#include <vector>
 #include <boost/program_options.hpp>
 #include "vptree.h"
 
@@ -108,6 +109,14 @@ static void truncate_data(double *X, int num_instances, int num_features, int ta
 static bool run(double *X, int num_instances, int num_features, double perplexity,
 		unsigned int **temp_row_P, unsigned int **temp_col_P, double **temp_val_P) {
 
+  int K = (int) 3*perplexity; 
+  *temp_row_P = (unsigned int*) malloc((num_instances+1)*sizeof(unsigned int));
+  *temp_col_P = (unsigned int*) calloc(num_instances*K, sizeof(unsigned int));
+  *temp_val_P = (double *) calloc(num_instances*K, sizeof(double));
+  unsigned int* row_P = *temp_row_P;
+  unsigned int* col_P = *temp_col_P;
+  double* val_P = *temp_val_P;
+
   // Apply lower bound on perplexity from original t-SNE implementation
   if (num_instances - 1 < 3 * perplexity) {
     cout << "Error: target perplexity (" << perplexity << ") is too large "
@@ -133,7 +142,7 @@ static bool run(double *X, int num_instances, int num_features, double perplexit
   }
 
   // Compute input similarities for exact t-SNE
-  double* P; unsigned int* row_P; unsigned int* col_P; double* val_P;
+  double* P; // unsigned int* row_P; unsigned int* col_P; double* val_P;
 
   // Compute asymmetric pairwise input similarities
   cout << "Computing conditional distributions" << endl;
@@ -164,7 +173,7 @@ static bool run(double *X, int num_instances, int num_features, double perplexit
   fwrite(col_P, sizeof(unsigned int), row_P[num_instances], fp);
   fwrite(val_P, sizeof(double), row_P[num_instances], fp);
   */
-
+  /*
   *temp_row_P = row_P;
   *temp_col_P = col_P;
   *temp_val_P = val_P; 
@@ -172,7 +181,8 @@ static bool run(double *X, int num_instances, int num_features, double perplexit
   free(row_P);
   free(col_P);
   free(val_P);
-
+  */
+  
   return true;
 }
 
@@ -190,7 +200,7 @@ bool save_sparse_mat(string outfile, unsigned int* row_P, unsigned int* col_P,
   fwrite(col_P, sizeof(unsigned int), row_P[num_instances], fp);
   fwrite(val_P, sizeof(double), row_P[num_instances], fp);
 
-  free(row_P); free(col_P); free(val_P); 
+  // free(row_P); free(col_P); free(val_P); 
   
   return true; 
 } 
@@ -236,11 +246,17 @@ int main(int argc, char **argv) {
   string infile_t;
   int time_start;
   int time_end;
-
+  
+  /*
   unsigned int *full_row_P = NULL;
   unsigned int *full_col_P = NULL;
   double *full_val_P = NULL; 
+  */
 
+  vector<unsigned int> full_row_P;
+  vector<unsigned int> full_col_P;
+  vector<double> full_val_P;
+  
   unsigned int *temp_row_P = NULL;
   unsigned int *temp_col_P = NULL;
   double *temp_val_P = NULL;
@@ -261,23 +277,41 @@ int main(int argc, char **argv) {
     if (!load_data(infile_t, &data, num_instances[t], num_features)) {
       return 1;
     }
+
+    cout << "# instances: " << num_instances[t] << endl;
+    
     old_row = current_row; 
     current_row += num_instances[t];
     
-    cout << "Current row: " << current_row << endl; 
-					      
+    // CHANGE TO VECTORS?
+    
+    cout << "Current row: " << current_row << endl;
+
+    // Update "full" vectors to hold new data
+    try {
+    full_row_P.reserve(current_row+1);
+    full_col_P.reserve(current_row*K);
+    full_val_P.reserve(current_row*K); 
+    } catch(...) {
+      cout << "Some sort of error has happened" << endl;
+      return 1; 
+    }
+    
+    /*
     full_row_P = (unsigned int *)realloc(full_row_P,
 					 (current_row+1)*sizeof(unsigned int));
 					      
     full_col_P = (unsigned int *)realloc(full_col_P,
 					 (current_row*K)*sizeof(unsigned int)); 
     full_val_P = (double *)realloc(full_val_P, (current_row*K)*sizeof(double));
-					      /*
+    */
+    
+    /*
     if(full_row_P == NULL || full_col_P == NULL || full_val_P == NULL) {
       cout << "ERROR! memory allocation FAILED";
       return 1; 
     } 
-					      */
+    */
     
     cout << infile_t << " successfully loaded" << endl;
   
@@ -294,19 +328,28 @@ int main(int argc, char **argv) {
     }
 
     for(int r=0; r<=num_instances[t]; r++) {
-      full_row_P[old_row+r] = temp_row_P[r]; 
+      full_row_P.push_back(temp_row_P[r]); 
     }
 
     for(int c=0; c<=num_instances[t]*K; c++) {
-      full_col_P[old_row*K + c] = temp_col_P[c];
-      full_val_P[old_row*K + c] = temp_val_P[c];
+      full_col_P.push_back(temp_col_P[c]);
+      full_val_P.push_back(temp_val_P[c]);
     } 
     
-    free(data); 
+    free(data);
+    free(temp_row_P);
+    free(temp_col_P);
+    free(temp_val_P);
+
     cout << "Done with t : " << t << endl;
   }
 
-  save_sparse_mat(outfile, full_row_P, full_col_P, full_val_P, current_row); 
+  save_sparse_mat(outfile, &full_row_P[0], &full_col_P[0], &full_val_P[0], current_row);
+  /*
+  delete *full_row_P;
+  delete *full_col_P;
+  delete *full_val_P;
+  */
   
   return 0;
 }
