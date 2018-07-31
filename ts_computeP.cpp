@@ -63,6 +63,35 @@ static bool load_data(string infile, double **data, int &num_instances, int &num
 	return true;
 }
 
+
+static bool load_OT(string infile, int &N, unsigned int** row_P, unsigned int** col_P, double** val_P) {
+  FILE *h;
+	if((h = fopen(infile.c_str(), "rb")) == NULL) {
+    return false;
+	}
+
+  size_t ret = 0;
+  ret += fread(&N, sizeof(int), 1, h);
+  *row_P = (unsigned int*)malloc((N+1) * sizeof(unsigned int));
+  if (*row_P == NULL) {
+    printf("Memory allocation error\n");
+    exit(1);
+  }
+  ret += fread(*row_P, sizeof(unsigned int), N+1, h);
+  *col_P = (unsigned int*)malloc((*row_P)[N] * sizeof(unsigned int));
+  *val_P = (double*)malloc((*row_P)[N] * sizeof(double));
+  if (*col_P == NULL || *val_P == NULL) {
+    printf("Memory allocation error\n");
+    exit(1);
+  }
+  ret += fread(*col_P, sizeof(unsigned int), (*row_P)[N], h);
+  ret += fread(*val_P, sizeof(double), (*row_P)[N], h);
+  fclose(h);
+
+  printf("P successfully loaded\n");
+  return true;
+}
+
 static void truncate_data(double *X, int num_instances, int num_features, int target_dims) {
   size_t i_old = 0;
   size_t i_new = 0;
@@ -76,7 +105,8 @@ static void truncate_data(double *X, int num_instances, int num_features, int ta
   }
 }
 
-static bool run(double *X, int num_instances, int num_features, double perplexity, string outfile) {
+static bool run(double *X, int num_instances, int num_features, double perplexity,
+		unsigned int **temp_row_P, unsigned int **temp_col_P, double **temp_val_P) {
 
   // Apply lower bound on perplexity from original t-SNE implementation
   if (num_instances - 1 < 3 * perplexity) {
@@ -121,24 +151,50 @@ static bool run(double *X, int num_instances, int num_features, double perplexit
     val_P[i] /= sum_P;
   }
 
+  /*
   cout << "Saving to " << outfile << endl;
-	FILE *fp = fopen(outfile.c_str(), "wb");
-	if (fp == NULL) {
-		cout << "Error: could not open output file " << outfile << endl;
+  FILE *fp = fopen(outfile.c_str(), "wb");
+  if (fp == NULL) {
+    cout << "Error: could not open output file " << outfile << endl;
     return false;
-	}
+  }
 
-	fwrite(&num_instances, sizeof(int), 1, fp);
+  fwrite(&num_instances, sizeof(int), 1, fp);
   fwrite(row_P, sizeof(unsigned int), num_instances + 1, fp);
-	fwrite(col_P, sizeof(unsigned int), row_P[num_instances], fp);
+  fwrite(col_P, sizeof(unsigned int), row_P[num_instances], fp);
   fwrite(val_P, sizeof(double), row_P[num_instances], fp);
+  */
 
+  *temp_row_P = row_P;
+  *temp_col_P = col_P;
+  *temp_val_P = val_P; 
+  
   free(row_P);
   free(col_P);
   free(val_P);
 
   return true;
 }
+
+bool save_sparse_mat(string outfile, unsigned int* row_P, unsigned int* col_P,
+		     double* val_P, int num_instances) {
+  cout << "Saving to " << outfile << endl;
+  FILE *fp = fopen(outfile.c_str(), "wb");
+  if (fp == NULL) {
+    cout << "Error: could not open output file " << outfile << endl;
+    return false;
+  }
+
+  fwrite(&num_instances, sizeof(int), 1, fp);
+  fwrite(row_P, sizeof(unsigned int), num_instances + 1, fp);
+  fwrite(col_P, sizeof(unsigned int), row_P[num_instances], fp);
+  fwrite(val_P, sizeof(double), row_P[num_instances], fp);
+
+  free(row_P); free(col_P); free(val_P); 
+  
+  return true; 
+} 
+
 
 int main(int argc, char **argv) {
   // Declare the supported options.
@@ -150,6 +206,7 @@ int main(int argc, char **argv) {
     ("perp", po::value<double>()->value_name("NUM")->default_value(30, "30"), "set target perplexity for conditional distributions")
     ("num-dims", po::value<int>()->value_name("NUM"), "if provided, only the first NUM features in the input will be used")
     ("time-steps", po::value<int>()->value_name("NUM")->default_value(1,"1"), "set number of time steps in the data")
+    ("time-offset", po::value<int>()->value_name("NUM")->default_value(0,"0"), "# of time-steps to look fro OT couplings")
   ;
 
   po::variables_map vm;
@@ -163,41 +220,94 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-	double perplexity = vm["perp"].as<double>();
-	string infile = vm["input-file"].as<string>();
+  double perplexity = vm["perp"].as<double>();
+  string infile = vm["input-file"].as<string>();
   string outfile = vm["output-file"].as<string>();
 
-  // int time_steps - vm["time-steps"].as<int>(); // when we get this working
+  // int time_steps = vm["time-steps"].as<int>(); // when we get this working
+  int time_steps = 2;
+
+  // int time_offset = vm["time-offset"].as<int>();
+  int time_offset = 1; 
   
-  int time_steps = 2; 
   double *data;
-  int num_instances;
+  int* num_instances = (int*) calloc(time_steps, sizeof(int));
   int num_features;
   string infile_t;
+  int time_start;
+  int time_end;
+
+  unsigned int *full_row_P = NULL;
+  unsigned int *full_col_P = NULL;
+  double *full_val_P = NULL; 
+
+  unsigned int *temp_row_P = NULL;
+  unsigned int *temp_col_P = NULL;
+  double *temp_val_P = NULL;
   
-  for(int t=0; t < time_steps; t++) { 
+  unsigned int current_row = 0;
+  unsigned int old_row = 0; 
+  unsigned col_offset =0;
+  unsigned int K = (int)(3*perplexity); // # of nearest neighbors
+
+  
+  for(int t=0; t < time_steps; t++) {
+    time_start = (t - time_offset > 0) ? (t-time_offset):0;
+    time_end = (t + time_offset > time_steps - 1) ? (time_steps - 1):(t+time_offset);
+    
 
     infile_t = infile + "_"+ to_string(t) + ".dat";
     
-	if (!load_data(infile_t, &data, num_instances, num_features)) {
-    return 1;
+    if (!load_data(infile_t, &data, num_instances[t], num_features)) {
+      return 1;
+    }
+    old_row = current_row; 
+    current_row += num_instances[t];
+    
+    cout << "Current row: " << current_row << endl; 
+					      
+    full_row_P = (unsigned int *)realloc(full_row_P,
+					 (current_row+1)*sizeof(unsigned int));
+					      
+    full_col_P = (unsigned int *)realloc(full_col_P,
+					 (current_row*K)*sizeof(unsigned int)); 
+    full_val_P = (double *)realloc(full_val_P, (current_row*K)*sizeof(double));
+					      /*
+    if(full_row_P == NULL || full_col_P == NULL || full_val_P == NULL) {
+      cout << "ERROR! memory allocation FAILED";
+      return 1; 
+    } 
+					      */
+    
+    cout << infile_t << " successfully loaded" << endl;
+  
+    if (vm.count("num-dims")) {
+      int num_dims = vm["num-dims"].as<int>();
+      cout << "Using only the first " << num_dims << " dimensions" << endl;
+      truncate_data(data, num_instances[t], num_features, num_dims);
+      num_features = num_dims;
+    }
+  
+    if (!run(data, num_instances[t], num_features, perplexity, &temp_row_P,
+	     &temp_col_P, &temp_val_P)) {
+      return 1;
+    }
+
+    for(int r=0; r<=num_instances[t]; r++) {
+      full_row_P[old_row+r] = temp_row_P[r]; 
+    }
+
+    for(int c=0; c<=num_instances[t]*K; c++) {
+      full_col_P[old_row*K + c] = temp_col_P[c];
+      full_val_P[old_row*K + c] = temp_val_P[c];
+    } 
+    
+    free(data); 
+    cout << "Done with t : " << t << endl;
   }
 
-  cout << infile_t << " successfully loaded" << endl;
+  save_sparse_mat(outfile, full_row_P, full_col_P, full_val_P, current_row); 
   
-  if (vm.count("num-dims")) {
-    int num_dims = vm["num-dims"].as<int>();
-    cout << "Using only the first " << num_dims << " dimensions" << endl;
-    truncate_data(data, num_instances, num_features, num_dims);
-    num_features = num_dims;
-  }
-  
-  if (!run(data, num_instances, num_features, perplexity, outfile)) {
-    return 1;
-  }
-
-  cout << "Done" << endl;
-  }
   return 0;
 }
 

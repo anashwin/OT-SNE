@@ -229,7 +229,7 @@ private:
             if(heap.size() == k) heap.pop();                 // remove furthest node from result list (if we already have k results)
             heap.push(HeapItem(node->index, dist));           // add current node to result list
             if(heap.size() == k) _tau = heap.top().dist;     // update value of tau (farthest point in result list)
-        }
+        } 
         
         // Return if we arrived at a leaf
         if(node->left == NULL && node->right == NULL) {
