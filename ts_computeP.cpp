@@ -201,17 +201,41 @@ static bool run(double *X, int num_instances, int num_features, double perplexit
 bool save_sparse_mat(string outfile, unsigned int* row_P, unsigned int* col_P,
 		     double* val_P, int num_instances) {
 
+  /*
   cout << "Printing pattern" << endl;
 
   int cursor;
   int col_start;
   int col_end;
+  string output = ""; 
+
+  // Create blank string
+  for(int r=0; r<num_instances; r++) {
+    for(int c=0; c<num_instances; c++) {
+      output += " "; 
+    }
+    output += "\n"; 
+  } 
+
+  for(int r=0; r<num_instances; r++) {
+    col_start = row_P[r];
+    col_end = row_P[r+1];
+    for (int c=col_start; c<col_end; c++) {
+      output.replace(r*(num_instances+1) + col_P[c], 1, "x"); 
+    } 
+  } 
+
+  cout << output; 
+
+  */
+  
+  /*
   for(int r=0; r< num_instances; r++) {
     // cout << r << "; ";
     cursor=0;
     col_start = row_P[r];
     col_end = row_P[r+1]; 
-    
+
     for(int c=0; c< num_instances; c++) {
       if(c==col_P[col_start+cursor] && cursor<col_end) {
 	cout << "x";
@@ -221,7 +245,8 @@ bool save_sparse_mat(string outfile, unsigned int* row_P, unsigned int* col_P,
     } 
     cout << endl;
   }
-  
+  */
+
   cout << "Saving to " << outfile << endl;
   FILE *fp = fopen(outfile.c_str(), "wb");
   if (fp == NULL) {
