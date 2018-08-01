@@ -43,7 +43,7 @@
 #include "array_sptree.h"
 #include "ts_sne.h"
 
-using namespace std;
+// using namespace std;
 // namespace po = boost::program_options;
 // namespace fsys = boost::filesystem;
 
