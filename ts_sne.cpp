@@ -184,6 +184,7 @@ bool TS_SNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
     MIN_SAMPLE_Z = 0;
   }
 
+  // Comment
   int stop_lying_iter = STOP_LYING;
   int mom_switch_iter = MOM_SWITCH_ITER;
   double momentum = MOM_INIT;
