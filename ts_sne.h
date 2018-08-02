@@ -79,7 +79,7 @@ public:
   std::string ACT_FN = "relu";
   bool SGD_FLAG = true;
 
-  int T_OFFSET = 1; // How many time-steps to look ahead/behind for couplings
+  int T_OFFSET = 0; // How many time-steps to look ahead/behind for couplings
 
   bool load_P(std::string infile, int &N, unsigned int** row_P, unsigned int** col_P, double** val_P);
   void save_P(int N, unsigned int* row_P, unsigned int* col_P, double* val_P, std::string filename = "P.dat");

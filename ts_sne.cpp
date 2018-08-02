@@ -1067,9 +1067,16 @@ void TS_SNE::computeGradient(int subN, int extraN, vec &pos_correct, unsigned in
       } else {
         neg_correct = 1.0;
       }
+      
+      int ts = assignments[ind_offset + n];
+      int time_start = (ts - T_OFFSET > 0) ? (ts - T_OFFSET) : 0;
+      int time_end = (ts + T_OFFSET < time_steps) ? (ts + T_OFFSET) : time_steps; 
+      
       // ind_offset tells your what row to offset by
-      tree->computeNonEdgeForces(ind_offset + n, theta, neg_f_tmp, &cur_qsum, T_OFFSET);
-      // D is the total number of neighbors? That way n*D gives the row that we should look at
+      for(int t=time_start; t<time_end; t++){ 
+	tree->computeNonEdgeForces(ind_offset + n, theta, neg_f_tmp, &cur_qsum, T_OFFSET, t);
+      }
+
       for (int d = 0; d < D; d++) {
         neg_f[n * D + d] += neg_f_tmp[d] * neg_correct;
       }
@@ -1122,7 +1129,18 @@ double TS_SNE::evaluateError(unsigned int* row_P, unsigned int* col_P, double* v
   ArraySPTree* tree = new ArraySPTree(D, Y, N, time_steps, assignments);
     double* buff = (double*) calloc(D, sizeof(double));
     double sum_Q = .0;
-    for(int n = 0; n < N; n++) tree->computeNonEdgeForces(n, theta, buff, &sum_Q, T_OFFSET);
+    
+    for(int n = 0; n < N; n++) {
+      int ts = assignments[n];
+      int time_start = (ts - T_OFFSET > 0) ? (ts - T_OFFSET) : 0;
+      int time_end = (ts + T_OFFSET < time_steps) ? (ts + T_OFFSET) : time_steps; 
+      
+      // ind_offset tells your what row to offset by
+      for(int t=time_start; t<time_end; t++){ 
+	tree->computeNonEdgeForces(n, theta, buff, &sum_Q, T_OFFSET, t);
+      }
+      // tree->computeNonEdgeForces(n, theta, buff, &sum_Q, T_OFFSET);
+    }
 
     // Loop over all edges to compute t-SNE error
     int ind1, ind2;

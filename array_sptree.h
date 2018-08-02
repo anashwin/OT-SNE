@@ -34,7 +34,7 @@
 #ifndef ARRAYSPTREE_H
 #define ARRAYSPTREE_H
 
-// using namespace std;
+using namespace std;
 
 // class ArraySPTree;
 
