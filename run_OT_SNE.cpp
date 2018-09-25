@@ -19,18 +19,22 @@ bool load_assignments(string infile_asgn, int* assignments, int time_steps) {
     assignments[ctr] = asgn_num;
     ctr ++; 
 
-    if(ctr > time_steps) {
+    /*    if(asgn_num > time_steps) {
       cout << "Too many time points in the file!" << endl;
       return 1; 
     } 
-  }
+    */
 
+    // cout << assignments[ctr-1] << ", "; 
+  }
+  /*
   if(ctr < time_steps) {
     cout << "Too few time points in the file!" << endl;
     return 1; 
   }
-
-  return 0; 
+  */
+  cout << endl; 
+  return true; 
 } 
 
 bool load_data(string infile_X, mat &X, int &num_instances, int &num_features) {
@@ -52,6 +56,7 @@ bool load_data(string infile_X, mat &X, int &num_instances, int &num_features) {
   size_t batch_size = 1e8;
   double *ptr = X.memptr();
   ret = 0;
+  
   for (uint64_t remaining = nelem; remaining > 0; remaining -= batch_size) {
     if (remaining < batch_size) {
       batch_size = remaining;
@@ -59,16 +64,16 @@ bool load_data(string infile_X, mat &X, int &num_instances, int &num_features) {
     ret += fread(ptr, sizeof(double), batch_size, fp);
     ptr += batch_size;
   }
-  
+    
   if (ret != nelem) {
     cout << "Error: reading input returned incorrect number of elements (" << ret
          << ", expected " << nelem << ")" << endl;
     return false;
   }
-  
-	fclose(fp);
 
-	return true;
+  fclose(fp);
+
+  return true;
 }
 
 
@@ -77,10 +82,10 @@ int main(int argc, char **argv) {
   // Declare the supported options
   po::options_description desc("Allowed options");
   desc.add_options()
-    ("help", "produce help message")
+    // ("help", "produce help message")
     ("input-X", po::value<string>()->value_name("FILE")->default_value("data.dat"), "name of binary input file containing data feature matrix (see prepare_input.m)")
     ("input-asgn", po::value<string>()->value_name("FILE")->default_value("assignments.txt"), "name of txt file containing time assignments for each cell in X")
-    ("time-steps", po::value<int>()->value_name("NUM")->default_value(1), "# of time points in the data")
+    ("time-steps", po::value<int>()->value_name("NUM")->default_value(2), "# of time points in the data")
     ("input-P", po::value<string>()->value_name("FILE")->default_value("P.dat"), "name of binary input file containing P matrix (see ComputeP)")
     ("input-Y", po::value<string>()->value_name("FILE"), "if this option is provided, net-SNE will train to match the provided embedding instead of using the P matrix")
     ("out-dir", po::value<string>()->value_name("DIR")->default_value("out"), "where to create output files; directory will be created if it does not exist")
@@ -120,11 +125,11 @@ int main(int argc, char **argv) {
                 options(desc).run(), vm);
   po::notify(vm);    
 
-  if (vm.count("help")) {
-    cout << "Usage: RunBhtsne [options]" << endl;
-    cout << desc << "\n";
-    return 1;
-  }
+  // if (vm.count("help")) {
+  //   cout << "Usage: RunBhtsne [options]" << endl;
+  //   cout << desc << "\n";
+  //   return 1;
+  // }
 
   int time_steps = vm["time-steps"].as<int>(); 
   
@@ -180,6 +185,9 @@ int main(int argc, char **argv) {
   //ts_sne->MONTE_CARLO_POS = vm["monte-carlo-pos"].as<bool>(); ofs << "monte-carlo-pos: " << ts_sne->MONTE_CARLO_POS << endl;
   //ts_sne->MATCH_POS_NEG = vm["match-pos-neg"].as<bool>(); ofs << "match-pos-neg: " << ts_sne->MATCH_POS_NEG << endl;
 
+  ts_sne->SGD_FLAG = false;
+  cout << "sgd flag: " << ts_sne->SGD_FLAG << endl; 
+  
   ts_sne->MODEL_PREFIX_FLAG = vm.count("init-model-prefix");
   if (ts_sne->MODEL_PREFIX_FLAG) {
     ts_sne->MODEL_PREFIX = vm["init-model-prefix"].as<string>();
@@ -246,13 +254,28 @@ int main(int argc, char **argv) {
   int num_instances;
   int num_features;
   if (!load_data(infile_X, X, num_instances, num_features)) {
+
     return 1;
   }
+
   cout << endl;
+
   cout << "Loading assignments ... ";
-  int* assignments = (int*)malloc(sizeof(int)*time_steps); 
+  int* assignments = (int*)malloc(sizeof(int)*num_instances); 
+
+  int test=0;
+  if (test) {
+    cout << "BLAHHHHH"; 
+  }
+  else {
+    cout << "NOOOOOO";
+  } 
+
   
-  if (!load_assignments(infile_asgn, assignments, time_steps)) return 1; 
+  if (!load_assignments(infile_asgn, assignments, time_steps)) {
+    cout << "FAILED TO LOAD" << endl;
+    return 1;
+  }
   
   if (X.n_rows > num_input_feat) {
     cout << "Truncating to top " << num_input_feat << " features" << endl;
@@ -309,6 +332,8 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  free(assignments);
+  
   free(row_P);
   free(col_P);
   free(val_P);

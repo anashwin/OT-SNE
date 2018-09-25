@@ -77,7 +77,7 @@ public:
   int PERM_ITER = INT_MAX;
   int CACHE_ITER = INT_MAX;
   std::string ACT_FN = "relu";
-  bool SGD_FLAG = true;
+  bool SGD_FLAG = false;
 
   int T_OFFSET = 0; // How many time-steps to look ahead/behind for couplings
 

@@ -296,7 +296,7 @@ int main(int argc, char **argv) {
   int time_steps = 2;
 
   // int time_offset = vm["time-offset"].as<int>();
-  int time_offset = 1; 
+  int time_offset = 0; 
   
   double *data;
   int* num_instances = (int*) calloc(time_steps, sizeof(int));

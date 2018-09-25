@@ -26,7 +26,7 @@
  * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
- * OF SUCH DAMAGE.
+v * OF SUCH DAMAGE.
  *
  */
 
@@ -567,7 +567,7 @@ bool TS_SNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
   }
 
   ivec X_perm_indices, perm_indices;
-
+  // max_iter = 5000; 
   for (int iter = 0; iter < max_iter; iter++) {
 
     tic();
@@ -593,7 +593,7 @@ bool TS_SNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
       X_perm_indices = perm_indices;
       printf("done (%.2f secs)\n", toc() / 1000);
     }
-
+  
     int batch_id = iter % nbatch;
     int batch_start = batch_id * subN;
     int batch_end = min(N, batch_start + subN);
@@ -677,7 +677,7 @@ bool TS_SNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
         }
       }
     }
-
+  
     // Forward propagation
     for (int i = 0; i < nlayers; i++) {
 
@@ -711,7 +711,7 @@ bool TS_SNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
         A[i].each_col() += beta_BN[i];
       }
     }
-
+  
     // Output layer
     mat Y_mini = W[nlayers] * A[nlayers - 1];
 
@@ -730,7 +730,27 @@ bool TS_SNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
           col_P, val_P, Y_mini.memptr(), N_mini, no_dims, dY.memptr(), theta,
 		      iter < stop_lying_iter, map_all_flag ? batch_start : 0, time_steps,
 		      assignments);
+
+      // Look at the old compute gradient function
+      /*
+      old_computeGradient(batch_N, extra_N, pos_correct, row_P,
+          col_P, val_P, Y_mini.memptr(), N_mini, no_dims, dY.memptr(), theta,
+			  iter < stop_lying_iter, map_all_flag ? batch_start : 0); 
+      */
     }
+    if (iter == 20) { 
+    for (int y_i=0; y_i < 10; y_i++) {
+      cout << Y_mini(0, y_i) << ", " << Y_mini(1, y_i) << endl; 
+    }
+    }
+    /*
+    // DEBUG!!!
+    cout << "==== OUTPUT DY! ====" << endl; 
+    for (int dy_i = 0; dy_i < batch_N; dy_i ++) {
+      cout << dY(0, dy_i) << ", " << dY(1, dy_i) << endl;
+    }
+    cout << " ==== DY DONE === " << endl; 
+    */
 
     // Take the gradients/other related data for only the primary points in the mini-batch
     // Note that the remaining points are used for approximating the gradients of the primary points
@@ -865,7 +885,7 @@ bool TS_SNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
         W[i] -= eta * dW[i];
       }
     }
-
+  
     // Print out progress
     if (((iter + 1) % 50 == 0 || iter == max_iter - 1)) {
       t_end = chrono::high_resolution_clock::now();
@@ -892,7 +912,7 @@ bool TS_SNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
       }
 
       Y = W[nlayers] * A[nlayers - 1];
-
+    
       double C;
       if (use_target_Y) {
         C = sqrt(sum(sum(square(target_Y - Y))));
@@ -1040,6 +1060,15 @@ void TS_SNE::computeGradient(int subN, int extraN, vec &pos_correct, unsigned in
     computeEdgeForces(inp_row_P, inp_col_P, inp_val_P, subN, pos_f, 
         MATCH_POS_NEG ? neg_f : NULL, qsum, D, Y, ind_offset);
 
+
+    // cout << "HERE we are finally making the tree" << endl;
+    /* 
+    // DEBUGGING: WHAT DOES THE DATA LOOK LIKE?
+    for (int y_ind=0; y_ind < subN + extraN; y_ind++) {
+      cout << Y[y_ind*D] << ", " << Y[y_ind*D + 1] << endl;
+    }
+    */
+    
     ArraySPTree* tree = new ArraySPTree(D, Y, subN + extraN, time_steps, assignments);
 
     // subN is the size of the batch (AN)
@@ -1073,10 +1102,114 @@ void TS_SNE::computeGradient(int subN, int extraN, vec &pos_correct, unsigned in
       int time_end = (ts + T_OFFSET < time_steps) ? (ts + T_OFFSET) : time_steps; 
       
       // ind_offset tells your what row to offset by
-      for(int t=time_start; t<time_end; t++){ 
+      // cout << "start: " << time_start << "; end: " << time_end << endl;
+      
+      for(int t=time_start; t<=time_end; t++){ 
 	tree->computeNonEdgeForces(ind_offset + n, theta, neg_f_tmp, &cur_qsum, T_OFFSET, t);
       }
 
+      // cout << "Q SUM: " << cur_qsum << endl;
+      
+      // cout << "NON EDGE FORCE COMPUTATIONS" << endl;
+      
+      for (int d = 0; d < D; d++) {
+        neg_f[n * D + d] += neg_f_tmp[d] * neg_correct;
+	// cout << n << ": " << neg_f_tmp[d] << ", " << endl; 
+	
+      }
+      
+      sum_Q += cur_qsum * neg_correct;
+      if (MATCH_POS_NEG) {
+        sum_Q += qsum[n];
+      }
+
+      if (MATCH_POS_NEG) {
+        // restore the tree
+        for (int j = inp_row_P[n]; j < inp_row_P[n+1]; j++) {
+          if (inp_col_P[j] < subN + extraN) { 
+            tree->modifyWeight(inp_col_P[j], +1);
+          }
+        }
+      }
+
+    }
+
+    // Compute final t-SNE gradient
+    for(int i = 0; i < subN; i++) {
+      for (int j = 0; j < D; j++) {
+        if (!SGD_FLAG) {
+          if (early_exaggeration) {
+            dC[i*D+j] = pos_f[i*D+j] - (neg_f[i*D+j] / sum_Q);
+	    
+	    // cout << "(" << i << ", " << j << ") : " << pos_f[i*D+j] << ", "
+	    // 	 << neg_f[i*D+j] << ", " << sum_Q << ", " << dC[i*D+j] << endl;
+	    
+          } else {
+            dC[i*D+j] = pos_f[i*D+j] - (neg_f[i*D+j] / sum_Q);
+          }
+        } else {
+          if (early_exaggeration) {
+            dC[i*D+j] = 12.0 * pos_f[i*D+j] * pos_correct(i) - (neg_f[i*D+j] / sum_Q) * (subN / (double) N);
+          } else {
+            dC[i*D+j] = pos_f[i*D+j] * pos_correct(i) - (neg_f[i*D+j] / sum_Q) * (subN / (double) N);
+          }
+        }
+      }
+    }
+    /*
+    for(int i=0; i < subN; i++) {
+      cout << i << ": " << dC[i*D] << ", " << dC[i*D+1] << endl;
+    } 
+    */
+    free(pos_f);
+    free(neg_f);
+    if (qsum != NULL) free(qsum);
+    delete tree;
+}
+
+/*
+void TS_SNE::old_computeGradient(int subN, int extraN, vec &pos_correct, unsigned int* inp_row_P, unsigned int* inp_col_P, double* inp_val_P, double* Y, int N, int D, double* dC, double theta, bool early_exaggeration, int ind_offset)
+{
+    // Compute all terms required for t-SNE gradient
+    double sum_Q = .0;
+    double* pos_f = (double*) calloc(subN * D, sizeof(double));
+    double* neg_f = (double*) calloc(subN * D, sizeof(double));
+    double* qsum;
+    if (MATCH_POS_NEG) {
+      qsum = (double*) calloc(subN, sizeof(double));
+    } else {
+      qsum = NULL;
+    }
+
+    if(pos_f == NULL || neg_f == NULL) { printf("Memory allocation failed!\n"); exit(1); }
+
+    computeEdgeForces(inp_row_P, inp_col_P, inp_val_P, subN, pos_f, 
+        MATCH_POS_NEG ? neg_f : NULL, qsum, D, Y, ind_offset);
+
+    SPTree* tree = new SPTree(D, Y, subN + extraN);
+    for (int n = 0; n < subN; n++) {
+
+      int ndup = 0;
+      if (MATCH_POS_NEG) {
+        // if an edge found in the tree, nullify its effect
+        for (int j = inp_row_P[n]; j < inp_row_P[n+1]; j++) {
+          if (inp_col_P[j] < subN + extraN) { 
+            tree->modifyWeight(inp_col_P[j], -1);
+            ndup++;
+          }
+        }
+      }
+
+      double cur_qsum = 0.0;
+      double neg_f_tmp[3] = {0};
+      double neg_correct;
+      if (MATCH_POS_NEG && SGD_FLAG) {
+        neg_correct = (N - 1 - ndup) / (double)(subN + extraN - 1 - ndup);
+      } else {
+        neg_correct = 1.0;
+      }
+
+      tree->computeNonEdgeForces(ind_offset + n, theta, neg_f_tmp, &cur_qsum);
       for (int d = 0; d < D; d++) {
         neg_f[n * D + d] += neg_f_tmp[d] * neg_correct;
       }
@@ -1120,6 +1253,7 @@ void TS_SNE::computeGradient(int subN, int extraN, vec &pos_correct, unsigned in
     if (qsum != NULL) free(qsum);
     delete tree;
 }
+*/
 
 // Evaluate t-SNE cost function (approximately)
 double TS_SNE::evaluateError(unsigned int* row_P, unsigned int* col_P, double* val_P, double* Y, int N, int D, double theta, vec& P_rowsum, unsigned int time_steps, int *assignments)
@@ -1136,7 +1270,7 @@ double TS_SNE::evaluateError(unsigned int* row_P, unsigned int* col_P, double* v
       int time_end = (ts + T_OFFSET < time_steps) ? (ts + T_OFFSET) : time_steps; 
       
       // ind_offset tells your what row to offset by
-      for(int t=time_start; t<time_end; t++){ 
+      for(int t=time_start; t<=time_end; t++){ 
 	tree->computeNonEdgeForces(n, theta, buff, &sum_Q, T_OFFSET, t);
       }
       // tree->computeNonEdgeForces(n, theta, buff, &sum_Q, T_OFFSET);

@@ -35,19 +35,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <cmath>
+#include "sptree.h"
 #include "array_sptree.h"
 
 #include <armadillo>
 using namespace arma;
 
 // Constructs cell
-Cell::Cell(unsigned int inp_dimension) {
+ArrayCell::ArrayCell(unsigned int inp_dimension) {
     dimension = inp_dimension;
     corner = (double*) malloc(dimension * sizeof(double));
     width  = (double*) malloc(dimension * sizeof(double));
 }
 
-Cell::Cell(unsigned int inp_dimension, double* inp_corner, double* inp_width) {
+ArrayCell::ArrayCell(unsigned int inp_dimension, double* inp_corner, double* inp_width) {
     dimension = inp_dimension;
     corner = (double*) malloc(dimension * sizeof(double));
     width  = (double*) malloc(dimension * sizeof(double));
@@ -56,29 +57,29 @@ Cell::Cell(unsigned int inp_dimension, double* inp_corner, double* inp_width) {
 }
 
 // Destructs cell
-Cell::~Cell() {
+ArrayCell::~ArrayCell() {
     free(corner);
     free(width);
 }
 
-double Cell::getCorner(unsigned int d) {
+double ArrayCell::getCorner(unsigned int d) {
     return corner[d];
 }
 
-double Cell::getWidth(unsigned int d) {
+double ArrayCell::getWidth(unsigned int d) {
     return width[d];
 }
 
-void Cell::setCorner(unsigned int d, double val) {
+void ArrayCell::setCorner(unsigned int d, double val) {
     corner[d] = val;
 }
 
-void Cell::setWidth(unsigned int d, double val) {
+void ArrayCell::setWidth(unsigned int d, double val) {
     width[d] = val;
 }
 
 // Checks whether a point lies in a cell
-bool Cell::containsPoint(double point[])
+bool ArrayCell::containsPoint(double point[])
 {
     for(int d = 0; d < dimension; d++) {
         if(corner[d] - width[d] > point[d]) return false;
@@ -101,7 +102,7 @@ ArraySPTree::ArraySPTree(unsigned int D, double* inp_data, unsigned int N, unsig
     double*  max_Y = (double*) malloc(D * sizeof(double)); for(unsigned int d = 0; d < D; d++)  max_Y[d] = -DBL_MAX;
     int t; 
     for(unsigned int n = 0; n < N; n++) {
-        t = inp_data[n];
+        t = ts_assignments[n];
 	pts_per_ts[t]++; 
         for(unsigned int d = 0; d < D; d++) {
             mean_Y[d] += inp_data[n * D + d];
@@ -188,10 +189,10 @@ void ArraySPTree::init(ArraySPTree* inp_parent, unsigned int D, double* inp_data
       direct_ptr = NULL;
     }
     
-    boundary = new Cell(dimension);
+    boundary = new ArrayCell(dimension);
     for(unsigned int d = 0; d < D; d++) boundary->setCorner(d, inp_corner[d]);
     for(unsigned int d = 0; d < D; d++) boundary->setWidth( d, inp_width[d]);
-    
+
     children = (ArraySPTree**) malloc(no_children * sizeof(ArraySPTree*));
     for(unsigned int i = 0; i < no_children; i++) children[i] = NULL;
 
@@ -213,6 +214,7 @@ ArraySPTree::~ArraySPTree()
     free(children);
     free(center_of_mass);
     free(buff);
+    // free(time_assignments); 
     if (parent == NULL && direct_ptr != NULL) free(direct_ptr);
     delete boundary;
 }
@@ -277,7 +279,7 @@ ArraySPTree* ArraySPTree::insert(unsigned int new_index)
         any_duplicate = any_duplicate | duplicate;
     }
     if(any_duplicate) {
-      cout << "DUPLICATE?" << endl;
+      // cout << "DUPLICATE?" << endl;
       return this;
     }
     
@@ -286,6 +288,7 @@ ArraySPTree* ArraySPTree::insert(unsigned int new_index)
     
     // Find out where the point can be inserted
     for(unsigned int i = 0; i < no_children; i++) {
+      // cout << "here's some shit " << new_index <<  endl;
       ArraySPTree* ret = children[i]->insert(new_index);
       if (ret != NULL) return ret;
     }
@@ -436,6 +439,8 @@ void ArraySPTree::computeNonEdgeForces(unsigned int point_index, double theta, d
       // cout << "Time = " << t << ";" << endl; 
 	    // if there are no points from this time step skip to next time step:
 	    if(cum_size[t] == 0) {
+	      // DEBUG DEBUG DEBUG
+	      // cout << "CUMULATIVE 0 :( :( :( " << endl;
 		continue; 
 	    }
 
@@ -448,7 +453,7 @@ void ArraySPTree::computeNonEdgeForces(unsigned int point_index, double theta, d
 	    for(unsigned int d = 0; d < dimension; d++) D += buff[d] * buff[d];
 
 	    if((cum_size[t] == 1) && (D < EPS)) {
-	      cout << "This box has only the target point!" << endl; 
+	      // cout << "This box has only the target point!" << endl; 
 	      continue; // The point in this quadrant is our pt
 	    } 
 
@@ -463,12 +468,12 @@ void ArraySPTree::computeNonEdgeForces(unsigned int point_index, double theta, d
 	    
 	    // Check whether we can use this node as a "summary"
 	    if(is_leaf || cum_size[t] == 1 || max_width / sqrt(D) < theta) {
-
+	      /*
 	      // PRINT DEBUGGING!
 	      cout << (is_leaf ? "Leaf":"CoM") << ", (" << center_of_mass[t*dimension] << ", "
 		   << center_of_mass[t*dimension+1] << "), t: " << t << endl;
 	      // DONE PRINTING
-	      
+	      */
 		// Compute and add t-SNE force between point and current node
 		D = 1.0 / (1.0 + D);
 		double mult = cum_size[t] * D;
@@ -477,11 +482,12 @@ void ArraySPTree::computeNonEdgeForces(unsigned int point_index, double theta, d
 		for(unsigned int d = 0; d < dimension; d++) neg_f[d] += mult * buff[d];
 	    }
 	    else {
+	      /*
 	      // DEBUGGING!
 	      cout << "Cannot be summary: (" << center_of_mass[t*dimension] << ", "
 		   << center_of_mass[t*dimension+1] << "); " << (max_width / sqrt(D))
 		   << "; t: " << t << endl;
-	      
+	      */
 		// Recursively apply Barnes-Hut to children
 		for(unsigned int i = 0; i < no_children; i++) {
 		  children[i]->computeNonEdgeForces(point_index,theta, neg_f, sum_Q, 0, t);

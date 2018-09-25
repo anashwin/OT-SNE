@@ -38,7 +38,7 @@ using namespace std;
 
 // class ArraySPTree;
 
-class Cell {
+class ArrayCell {
 
     unsigned int dimension;
     double* corner;
@@ -46,9 +46,9 @@ class Cell {
     
     
 public:
-    Cell(unsigned int inp_dimension);
-    Cell(unsigned int inp_dimension, double* inp_corner, double* inp_width);
-    ~Cell();
+    ArrayCell(unsigned int inp_dimension);
+    ArrayCell(unsigned int inp_dimension, double* inp_corner, double* inp_width);
+    ~ArrayCell();
     
     double getCorner(unsigned int d);
     double getWidth(unsigned int d);
@@ -75,7 +75,7 @@ class ArraySPTree
     unsigned int *cum_size; // array because we want to store the size by time_step
         
     // Axis-aligned bounding box stored as a center with half-dimensions to represent the boundaries of this quad tree
-    Cell* boundary;
+    ArrayCell* boundary;
     
     // Indices in this space-partitioning tree node, corresponding center-of-mass, and list of all children    
     double* data;
@@ -103,7 +103,7 @@ public:
     ~ArraySPTree();
     void setData(double* inp_data);
     ArraySPTree* getParent();
-    void construct(Cell boundary);
+    void construct(ArrayCell boundary);
     ArraySPTree* insert(unsigned int new_index);
     void subdivide();
     bool isCorrect();
