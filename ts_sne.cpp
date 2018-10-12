@@ -738,11 +738,14 @@ bool TS_SNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
 			  iter < stop_lying_iter, map_all_flag ? batch_start : 0); 
       */
     }
-    if (iter == 20) { 
+    /*
+    if (iter % 10 == 0) { 
     for (int y_i=0; y_i < 10; y_i++) {
       cout << Y_mini(0, y_i) << ", " << Y_mini(1, y_i) << endl; 
     }
     }
+    */
+    
     /*
     // DEBUG!!!
     cout << "==== OUTPUT DY! ====" << endl; 

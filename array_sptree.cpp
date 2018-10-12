@@ -93,7 +93,7 @@ bool ArrayCell::containsPoint(double point[])
 ArraySPTree::ArraySPTree(unsigned int D, double* inp_data, unsigned int N, unsigned int T,
 	       int* ts_assignments)
 {
-
+  
     int* pts_per_ts = (int*) calloc(T, sizeof(int));
     // Compute mean, width, and height of current map (boundaries of ArraySPTree)
     int nD = 0;

@@ -267,6 +267,10 @@ bool save_sparse_mat(string outfile, unsigned int* row_P, unsigned int* col_P,
 int main(int argc, char **argv) {
   // Declare the supported options.
   po::options_description desc("Allowed options");
+  cout << "INT SIZE: " << sizeof(int) << endl;
+  cout << "UNSIGNED:" << sizeof(unsigned int) << endl;
+  cout << "FLOAT: " << sizeof(double) << endl;
+  
   desc.add_options()
     ("help", "produce help message")
     ("input-file", po::value<string>()->value_name("FILE")->default_value("data"), "name of binary input file (see prepare_input.m)")
@@ -292,13 +296,12 @@ int main(int argc, char **argv) {
   string infile = vm["input-file"].as<string>();
   string outfile = vm["output-file"].as<string>();
 
-  // int time_steps = vm["time-steps"].as<int>(); // when we get this working
-  int time_steps = 2;
+  int time_steps = vm["time-steps"].as<int>(); // when we get this working
+  // int time_steps = 2;
 
   // int time_offset = vm["time-offset"].as<int>();
   int time_offset = 0; 
   
-  double *data;
   int* num_instances = (int*) calloc(time_steps, sizeof(int));
   int num_features;
   string infile_t;
@@ -310,7 +313,8 @@ int main(int argc, char **argv) {
   unsigned int *full_col_P = NULL;
   double *full_val_P = NULL; 
   */
-
+  double *data;
+  
   vector<unsigned int> full_row_P;
   vector<unsigned int> full_col_P;
   vector<double> full_val_P;
@@ -334,7 +338,7 @@ int main(int argc, char **argv) {
     time_end = (t + time_offset > time_steps - 1) ? (time_steps - 1):(t+time_offset);
     
 
-    infile_t = infile + "_"+ to_string(t) + ".dat";
+    infile_t = infile + to_string(t) + ".dat";
     
     if (!load_data(infile_t, &data, num_instances[t], num_features)) {
       return 1;
@@ -406,11 +410,15 @@ int main(int argc, char **argv) {
     free(temp_col_P);
     free(temp_val_P);
     */
+    /*
     for(int c=full_col_P.size()-100; c<full_col_P.size(); c++) {
       cout << full_col_P[c] << "," << full_val_P[c] << "; "; 
     } 
+    */
+    
     cout << endl;
     cout << "Done with t : " << t << endl;
+
   }
 
   
@@ -522,7 +530,7 @@ static void computeGaussianPerplexity(double* X, int N, int D, unsigned int** _r
             // Update iteration counter
             iter++;
         }
-
+	cout << "beta: " << beta << endl;
         // Row-normalize current row of P and store in matrix
         for(unsigned int m = 0; m < K; m++) cur_P[m] /= sum_P;
         for(unsigned int m = 0; m < K; m++) {

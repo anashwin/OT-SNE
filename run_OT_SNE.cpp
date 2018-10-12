@@ -17,7 +17,7 @@ bool load_assignments(string infile_asgn, int* assignments, int time_steps) {
 
   while(infile >> asgn_num) {
     assignments[ctr] = asgn_num;
-    ctr ++; 
+    ctr ++;
 
     /*    if(asgn_num > time_steps) {
       cout << "Too many time points in the file!" << endl;
@@ -49,6 +49,8 @@ bool load_data(string infile_X, mat &X, int &num_instances, int &num_features) {
 	ret = fread(&num_instances, sizeof(int), 1, fp);
 	ret = fread(&num_features, sizeof(int), 1, fp);
 
+	cout << endl << num_instances << ", " << num_features << endl;
+	
   X.set_size(num_features, num_instances);
 
   uint64_t nelem = (uint64_t)num_instances * num_features;
@@ -64,7 +66,17 @@ bool load_data(string infile_X, mat &X, int &num_instances, int &num_features) {
     ret += fread(ptr, sizeof(double), batch_size, fp);
     ptr += batch_size;
   }
-    
+
+  // DEBUG PRINTING!
+  /*
+  for (int r=0; r < num_features; r++) {
+    for (int c=0; c < num_instances; c++) {
+      cout << X(r,c) << ", ";
+    }
+    cout << endl;
+  } 
+  */
+  
   if (ret != nelem) {
     cout << "Error: reading input returned incorrect number of elements (" << ret
          << ", expected " << nelem << ")" << endl;
@@ -85,7 +97,7 @@ int main(int argc, char **argv) {
     // ("help", "produce help message")
     ("input-X", po::value<string>()->value_name("FILE")->default_value("data.dat"), "name of binary input file containing data feature matrix (see prepare_input.m)")
     ("input-asgn", po::value<string>()->value_name("FILE")->default_value("assignments.txt"), "name of txt file containing time assignments for each cell in X")
-    ("time-steps", po::value<int>()->value_name("NUM")->default_value(2), "# of time points in the data")
+    ("time-steps", po::value<int>()->value_name("NUM")->default_value(5), "# of time points in the data")
     ("input-P", po::value<string>()->value_name("FILE")->default_value("P.dat"), "name of binary input file containing P matrix (see ComputeP)")
     ("input-Y", po::value<string>()->value_name("FILE"), "if this option is provided, net-SNE will train to match the provided embedding instead of using the P matrix")
     ("out-dir", po::value<string>()->value_name("DIR")->default_value("out"), "where to create output files; directory will be created if it does not exist")
@@ -132,6 +144,7 @@ int main(int argc, char **argv) {
   // }
 
   int time_steps = vm["time-steps"].as<int>(); 
+  cout << time_steps << " ASDLKASJDLAKSJDLAS" << endl;
   
   string infile_P = vm["input-P"].as<string>();
   string infile_X = vm["input-X"].as<string>();
